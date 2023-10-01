@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop File Upload</title>
+    <style>
+        #drop-area {
+            width: 200px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            text-align: center;
+            padding: 20px;
+            cursor: pointer;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #file-name {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #file-icon {
+            display: none;
+            max-width: 50px; /* Adjust the size of the file icon as needed */
+        }
+    </style>
+</head>
+<body>
+    <div id="drop-area">
+        <p>Drag & Drop your CSV file here or click to select one</p>
+        <input type="file" id="file-input" name="formfile" accept=".csv">
+        <button id="upload-button" style="display: none;">Upload</button>
+        <div id="file-name"></div>
+        <img id="file-icon" src="file-icon.png" alt="File Icon">
+    </div>
+
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadButton = document.getElementById('upload-button');
+        const fileNameDisplay = document.getElementById('file-name');
+        const fileIcon = document.getElementById('file-icon');
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('active');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('active');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('active');
+
+            const files = e.dataTransfer.files;
+
+            if (files.length > 0) {
+                fileInput.files = files;
+                displayFileInfo(files[0]);
+                uploadButton.style.display = 'block';
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            const files = fileInput.files;
+
+            if (files.length > 0) {
+                displayFileInfo(files[0]);
+                uploadButton.style.display = 'block';
+            }
+        });
+
+        function displayFileInfo(file) {
+            fileNameDisplay.textContent = `Selected file: ${file.name}`;
+            fileIcon.style.display = 'inline'; // Show the file icon
+        }
+    </script>
+</body>
+</html>
