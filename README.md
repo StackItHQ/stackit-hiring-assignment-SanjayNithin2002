@@ -48,14 +48,26 @@ Once you're done, make sure you **record a video** showing your project working.
 
 We have a checklist at the bottom of this README file, which you should update as your progress with your assignment. It will help us evaluate your project.
 
-- [ ] My code's working just fine! 🥳
+- [✓] My code's working just fine! 🥳
 - [ ] I have recorded a video showing it working and embedded it in the README ▶️
-- [ ] I have tested all the normal working cases 😎
-- [ ] I have even solved some edge cases (brownie points) 💪
-- [ ] I added my very planned-out approach to the problem at the end of this README 📜
+- [✓] I have tested all the normal working cases 😎
+- [✓] I have even solved some edge cases (brownie points) 💪
+- [✓] I added my very planned-out approach to the problem at the end of this README 📜
 
 ## Got Questions❓
-Feel free to check the discussions tab, you might get something of help there. Check out that tab before reaching out to us. Also, did you know, the internet is a great place to explore 😛
+
+1) I would love to know about the products and services offered by the StackIt and their respective tech stack.
+2) What is the core-ideology or purpose behind StackIt?
 
 ## Developer's Section
-*Add your video here, and your approach to the problem (optional). Leave some comments for us here if you want, we will be reading this :)*
+
+**Video**:
+**Approach**:
+
+1) Broke down the problem into multiple chunks: Intial setup of nodejs with handlebars, reading csv files, filtering csv file data, googleapis connection, googleapis sheets creation, combining all these things together.
+2) Used regular packages for task1 and task2.
+3) In task-3 (filtering): I converted the array of object into an object of the array (huh), but the keys are mapped to array of values and I calculated the unique values, if it is less than 10. It it shown for filtering. Users can tick the checkbox and submit.
+4) Upon successful submission, the users are redirected to the google sheet created.
+5) There are a few negative cases to be considered as well. Eg: '404 - Not Found', 'Not uploading file', 'Uploading Wrong File Type', 'No record for the filtering criteria specified.'  
+
+

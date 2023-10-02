@@ -1,17 +1,34 @@
-<div id="drop-area">
-    <p>Drag & Drop your CSV file here or click to select one</p>
-    <form action="/uploadcsv" enctype="multipart/form-data" method="POST">
-        <input type="file" id="file-input" name="formfile" accept="text/csv">
-        <button id="upload-button" type="submit">Upload</button>
-    </form>
-    <div id="file-name"></div>
+<div class="card mb-3 bg-success" style="max-width: 540px; left:30%; top:30%; width:40%; height: 40%; margin-top:10%;">
+    <div class="row no-gutters">
+        <div class="col-md-4">
+            <img src="https://cdn.icon-icons.com/icons2/2248/PNG/512/file_upload_icon_136628.png" class="card-img" style="margin-top:30%"
+                alt="Login">
+        </div>
+        <div class="col-md-6">
+            <div class="card-body">
+                <h5 class="card-title">Upload File</h5>
+                <div id="drop-area">
+                    <p>Drag & Drop your CSV file here!</p>
+                    <form action="/upload/csv" enctype="multipart/form-data" method="POST" id="upload-form">
+                        <input type="file" id="file-input" name="formfile" accept="text/csv">
+                        <button id="upload-button" type="submit" style="display: none;">Upload</button>
+                    </form>
+                    <div id="file-name"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+
+
 
 <script>
     const dropArea = document.getElementById('drop-area');
     const fileInput = document.getElementById('file-input');
     const uploadButton = document.getElementById('upload-button');
     const fileNameDisplay = document.getElementById('file-name');
+    const uploadForm = document.getElementById('upload-form');
 
     dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -30,8 +47,9 @@
 
         if (files.length > 0) {
             fileInput.files = files;
-            displayFileName(files[0]);
-            uploadButton.style.display = 'block';
+            //displayFileName(files[0]);
+            uploadButton.style.display = 'none';
+            uploadForm.submit();
         }
     });
 
@@ -39,8 +57,9 @@
         const files = fileInput.files;
 
         if (files.length > 0) {
-            displayFileName(files[0]);
-            uploadButton.style.display = 'block';
+            //displayFileName(files[0]);
+            uploadButton.style.display = 'none';
+            uploadForm.submit();
         }
     });
 

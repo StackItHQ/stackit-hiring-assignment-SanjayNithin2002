@@ -1,5 +1,8 @@
-<form action="/filter" method="POST">
-    {{{html}}}
-    <input type="text" id="myInput" style="display: none;" value="{{path}}" name="file">
-    <button type="Submit">Filter</button>
+<br/><br/>
+<h2 align="center">Choose the filtering values</h2>
+<form action="/post/filters" method="POST" >
+<div class="filters">{{{html}}}</div>
+    <div class="text-center">
+    <button type="Submit" class="btn btn-light">Filter</button>
+    </div>
 </form>

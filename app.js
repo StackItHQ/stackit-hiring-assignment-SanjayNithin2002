@@ -1,4 +1,5 @@
 const express = require('express');
+const { google } = require('googleapis');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const multer = require('multer');
@@ -6,6 +7,7 @@ const fs = require('fs');
 const _ = require('lodash');
 const csvParser = require('csv-parser');
 var createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const cookieParser = require('cookie-parser');
 const handlebars = require('express-handlebars').create({
     defaultLayout: "main"
 });
@@ -44,6 +46,18 @@ const upload = multer({
     fileFilter: fileFilter
 });
 
+//should be stored as env variables.
+const oauth2Client = new google.auth.OAuth2(
+    "561417270978-ib7hcmepqd07uv40dbt39ghoajjld7qn.apps.googleusercontent.com",
+    "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",
+    "http://localhost:3000/auth/google/callback"
+);
+
+const scopes = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/spreadsheets'
+];
+
 // Middlewares
 app.engine("handlebars", handlebars.engine);
 app.set('view engine', 'handlebars');
@@ -51,13 +65,46 @@ app.set('views', './views');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(morgan('dev'));
+app.use(cookieParser('csvimporter'));
 
 // Routes
 app.get('/', (req, res) => {
-    res.render('index');
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes
+    });
+    res.render('login', {
+        url: authUrl
+    });
 });
 
-app.post('/uploadcsv', upload.single('formfile'), (req, res) => {
+app.get("/auth/google/callback", async (req, res) => {
+    const code = req.query.code;
+    console.log(code);
+    if (!code) {
+        res.status(400).send("Authorization code missing.");
+        return;
+    }
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        res.cookie('auth', tokens, { signed: true });
+        res.redirect('/successLogin');
+    } catch (error) {
+        console.error("Error exchanging authorization code:", error);
+        res.status(500).send("Error during authorization.");
+    }
+});
+
+app.get('/successLogin', (req, res) => {
+    res.render('successfulLogin');
+})
+
+app.get("/home", (req, res) => {
+    res.render('index');
+})
+
+
+app.post('/upload/csv', upload.single('formfile'), (req, res) => {
     if (req.file) {
         var records = []
         fs.createReadStream(req.file.path)
@@ -87,69 +134,117 @@ app.post('/uploadcsv', upload.single('formfile'), (req, res) => {
                         }, {}
                     )
                     const htmlRender = Object.keys(uniqueElementsObject).map(key => {
-                        const htmlLabel = `<h1>${key}</h1>`;
-                        const htmlCheckbox = uniqueElementsObject[key].map(value => `${value}: <input type="checkbox" name=${key} value=${value}>`).join(' ');
-                        return htmlLabel + htmlCheckbox;
+                        const htmlCheckbox = uniqueElementsObject[key].map(value => `<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name=${key} value=${value}><label class="form-check-label">${value}</label></div>`).join(' ');
+                        const htmlElements = `<div class="card bg-success" style="width: 20rem;">
+                        <div class="card-body">
+                          <h5 class="card-title" style="color:black;">${key}</h5>
+                          ${htmlCheckbox}
+                        </div>
+                      </div>`
+                        return htmlElements + "<br/><br/><br/>";
                     }).join(' ');
+                    res.cookie('file', req.file.path, { signed: true, maxAge: 86400000 });
                     res.render('filters', {
-                        html: htmlRender,
-                        path: req.file.path
+                        html: htmlRender
                     })
                 }
                 else {
-                    res.send('Oops...you uploaded an empty file.')
+                    res.render('error', {
+                        message: 'Oops...you uploaded an empty file.'
+                    });
                 }
             });
     }
     else {
-        res.send('Oops...you uploaded a wrong file.')
+        res.render('error', {
+            message: 'Oops...you uploaded a wrong file.'
+        });
     }
 });
 
-app.post('/filter', (req, res) => {
+app.post('/post/filters', (req, res) => {
     var data = []
-    const path = req.body.file
-    fs.createReadStream(req.body.file)
-        .pipe(csvParser())
-        .on('data', (row) => {
-            data.push(row);
-        })
-        .on('end', () => {
-            const filterObject = req.body;
-            delete filterObject.file;
-            const filteredData = data.filter((item) => {
-                return Object.keys(filterObject).every((key) => {
-                    if (Array.isArray(filterObject[key])) {
-                        return filterObject[key].includes(item[key]);
-                    } else {
-                        return item[key] === filterObject[key];
-                    }
-                });
-            });
-            if (filteredData.length > 0) {
-                const csvWriter = createCsvWriter({
-                    path: path,
-                    header: Object.keys(filteredData[0]).map((id) => {
-                        return {
-                            'id': id,
-                            'title': id
+    if (req.signedCookies.file) {
+        fs.createReadStream(req.signedCookies.file)
+            .pipe(csvParser())
+            .on('data', (row) => {
+                data.push(row);
+            })
+            .on('end', async () => {
+                const filterObject = req.body;
+                const filteredData = data.filter((item) => {
+                    return Object.keys(filterObject).every((key) => {
+                        if (Array.isArray(filterObject[key])) {
+                            return filterObject[key].includes(item[key]);
+                        } else {
+                            return item[key] === filterObject[key];
                         }
-                    })
+                    });
                 });
-                csvWriter
-                    .writeRecords(filteredData)
-                    .then(() => res.download(__dirname + `/${path}`))
-                    .catch((error) => console.error(error));
-            }
-            else {
-                res.send('Oops...no record exists for the filter')
-            }
+                if (filteredData.length > 0) {
+                    oauth2Client.setCredentials(req.signedCookies.auth);
+                    var title = req.signedCookies.file;
+                    title = title.replace('uploads/');
+                    title = title.split("-")[1]
+                    const resource = {
+                        properties: {
+                            title,
+                        },
+                    };
+                    const service = google.sheets({ version: 'v4', auth: oauth2Client });
+
+                    try {
+                        const spreadsheet = await service.spreadsheets.create({
+                            resource,
+                            fields: 'spreadsheetId',
+                        });
+                        const spreadsheetId = spreadsheet.data.spreadsheetId;
+
+                        console.log(`Spreadsheet ID: ${spreadsheetId}`);
+
+                        const range = 'Sheet1!A1';
+                        const valueInputOption = 'RAW';
+                        const keys = Object.keys(filteredData[0]);
+                        const values = [keys, ...filteredData.map(obj => keys.map(key => obj[key]))];
+                        const requestBody = {
+                            values,
+                        };
+
+                        await service.spreadsheets.values.append({
+                            spreadsheetId,
+                            range,
+                            valueInputOption,
+                            requestBody,
+                        });
+
+                        res.render('successfulUpload', {
+                            redirect: `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+                        });
+                    } catch (err) {
+                        console.log(err);
+                        res.status(500).send("Error creating spreadsheet or adding content.");
+                    }
+                }
+                else {
+                    res.render('error', {
+                        message: 'Oops...no record exists for the filter'
+                    });
+                }
+            });
+    }
+    else {
+        res.render('error', {
+            message: "Oops...you didn't upload a file!"
         });
+    }
+
 });
 
 app.use((req, res) => {
     res.status(404);
-    res.render('notfound');
+    res.render('error', {
+        message: 'Oops...you have come to wrong place'
+    });
 });
 
 app.listen(port, () => {

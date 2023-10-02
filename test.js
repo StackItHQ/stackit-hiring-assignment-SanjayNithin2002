@@ -1,7 +1,9 @@
 const express = require('express');
 const app = express();
 const session = require('express-session');
-
+const cookieParser = require('cookie-parser');
+const { google } = require('googleapis');
+app.use(cookieParser('csvimporter'));
 app.use(session({
     resave: false,
     saveUninitialized: true,
@@ -16,14 +18,34 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => console.log('App listening on port ' + port));
 
 const passport = require('passport');
-var userProfile;
+var token;
 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.set('view engine', 'ejs');
 
-app.get('/success', (req, res) => res.send(userProfile));
+app.get('/success', async (req, res) => {
+    console.log(req.user);
+    res.cookie('token', token, { signed: true, maxAge: 86400000 });
+    const title = "first-sheet";
+    const resource = {
+        properties: {
+            title,
+        },
+    };
+    const service = google.sheets({version: 'v4', auth: req.user});
+    try {
+        const spreadsheet = await service.spreadsheets.create({
+            resource,
+            fields: 'spreadsheetId',
+        });
+        console.log(`Spreadsheet ID: ${spreadsheet.data.spreadsheetId}`);
+        return spreadsheet.data.spreadsheetId;
+    } catch (err) {
+        console.log(err);
+    }
+
+});
 app.get('/error', (req, res) => res.send("error logging in"));
 
 passport.serializeUser(function (user, cb) {
@@ -43,13 +65,15 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/callback"
 },
     function (accessToken, refreshToken, profile, done) {
-        userProfile = profile;
-        return done(null, userProfile);
+        console.log(accessToken);
+        console.log(refreshToken);
+        token = accessToken;
+        return done(null, token);
     }
 ));
 
 app.get('/auth/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] }));
+    passport.authenticate('google', { scope: ['profile', 'email', 'https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'] }));
 
 app.get('/auth/google/callback',
     passport.authenticate('google', { failureRedirect: '/error' }),
