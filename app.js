@@ -6,7 +6,6 @@ const multer = require('multer');
 const fs = require('fs');
 const _ = require('lodash');
 const csvParser = require('csv-parser');
-var createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const cookieParser = require('cookie-parser');
 const handlebars = require('express-handlebars').create({
     defaultLayout: "main"
@@ -48,9 +47,9 @@ const upload = multer({
 
 //should be stored as env variables.
 const oauth2Client = new google.auth.OAuth2(
-    "561417270978-ib7hcmepqd07uv40dbt39ghoajjld7qn.apps.googleusercontent.com",
-    "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",
-    "http://localhost:3000/auth/google/callback"
+    process.env.client_id,
+    process.env.client_secret,
+    process.env.callback_uri
 );
 
 const scopes = [
@@ -248,7 +247,7 @@ app.use((req, res) => {
 });
 
 app.listen(port, () => {
-    console.log("Logged In");
+    console.log(`Listening at Port ${port}`);
 });
 
 
